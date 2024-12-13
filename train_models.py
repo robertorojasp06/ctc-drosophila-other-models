@@ -291,9 +291,9 @@ class Trainer:
                     mean_metric = sum(epoch_metrics) / len(epoch_metrics)
                     val_metric_values += [
                         {
+                            "epoch": epoch_idx + 1,
                             "image": Path(item[0]).name,
                             "mask": Path(item[1]).name,
-                            "epoch": epoch_idx + 1,
                             "dice": item[2]
                         }
                         for item in zip(image_paths, mask_paths, epoch_metrics)
