@@ -25,7 +25,6 @@ import datetime
 import argparse
 import json
 import time
-import numpy as np
 
 
 class Trainer:
@@ -304,8 +303,7 @@ class Trainer:
                             "image": Path(item[0]).name,
                             "mask": Path(item[1]).name,
                             "dice": item[2],
-                            "seconds_per_patch_mean": np.mean(inference_time_seconds_per_patch),
-                            "seconds_per_patch_std": np.std(inference_time_seconds_per_patch)
+                            "seconds_per_patch": sum(inference_time_seconds_per_patch) / len(inference_time_seconds_per_patch)
                         }
                         for item in zip(image_paths, mask_paths, epoch_metrics)
                     ]
