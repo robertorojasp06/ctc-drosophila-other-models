@@ -24,6 +24,8 @@ import logging
 import datetime
 import argparse
 import json
+import time
+import numpy as np
 
 
 class Trainer:
@@ -228,6 +230,7 @@ class Trainer:
             logging.info(f"epoch: {epoch_idx+1}/{max_epochs}")
             epoch_loss = 0
             model.train()
+            start_time = time.time()
             for batch_idx, batch in enumerate(tr_dataloader):
                 inputs, labels = (
                     batch["image"].to(device),
@@ -244,11 +247,13 @@ class Trainer:
                 epoch_loss += loss.item()
                 if self.verbose:
                     logging.info(f"{batch_idx}/{len(tr_dataset) // tr_dataloader.batch_size}, " f"train_loss: {loss.item():.4f}")
+            end_time = time.time()
             epoch_loss /= (batch_idx + 1)
             epoch_loss_values.append(
                 {
                     "epoch": epoch_idx + 1,
-                    "mean_loss": epoch_loss
+                    "mean_loss": epoch_loss,
+                    "elapsed_time_seconds": end_time - start_time
                 }
             )
             logging.info(f"epoch {epoch_idx + 1} average loss: {epoch_loss:.4f}")
@@ -259,8 +264,10 @@ class Trainer:
                 model.eval()
                 image_paths = []
                 mask_paths = []
+                inference_time_seconds_per_patch = []
                 with torch.no_grad():
                     for batch in val_dataloader:
+                        start_time = time.time()
                         inputs, labels = (
                             batch["image"].to(device),
                             batch["label"].to(device)
@@ -286,6 +293,8 @@ class Trainer:
                             item["label_meta_dict"]['filename_or_obj']
                             for item in decollate_batch(batch)
                         ]
+                        end_time = time.time()
+                        inference_time_seconds_per_patch.append((end_time - start_time) / len(outputs))
                     epoch_metrics = dice_metric.aggregate().squeeze().tolist()
                     dice_metric.reset()
                     mean_metric = sum(epoch_metrics) / len(epoch_metrics)
@@ -294,7 +303,9 @@ class Trainer:
                             "epoch": epoch_idx + 1,
                             "image": Path(item[0]).name,
                             "mask": Path(item[1]).name,
-                            "dice": item[2]
+                            "dice": item[2],
+                            "seconds_per_patch_mean": np.mean(inference_time_seconds_per_patch),
+                            "seconds_per_patch_std": np.std(inference_time_seconds_per_patch)
                         }
                         for item in zip(image_paths, mask_paths, epoch_metrics)
                     ]
